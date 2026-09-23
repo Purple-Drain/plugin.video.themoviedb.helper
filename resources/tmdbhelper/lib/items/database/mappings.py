@@ -640,6 +640,8 @@ class ItemMapperMethods:
         data = []
 
         for artwork_type, artworks in items.items():
+            if not isinstance(artworks, list):
+                continue
             for artwork in artworks:
                 path = artwork['file_path']
                 data.append(
