@@ -1,3 +1,5 @@
+from time import monotonic
+from xbmcgui import Window
 from tmdbhelper.lib.addon.plugin import get_condvisibility, get_infolabel
 from jurialmunkey.window import WindowChecker
 
@@ -93,6 +95,37 @@ class Poller(WindowChecker):
 
     def _on_fullscreen(self):
         self._on_idle(POLL_MAX_INCREMENT)
+
+    _settle_window = None
+    _settle_since = 0
+    _settle_done = False
+
+    def _on_settle(self):
+        """ Opt-in for skins: once a window that sets TMDbHelper.SettleDelay (ms) has stayed
+        the base window that long, set TMDbHelper.Settled on it. Lets a skin hold content
+        back while the user is only passing through (skin.arctic.fuse.3 hubs). Skins that
+        never set the property are unaffected. The skin clears Settled when the window
+        closes, so a cleared Settled on the same window is a new visit, even one that
+        came and went between two polls. """
+        window_id = self.current_base_window
+        settled = get_infolabel(f'Window({window_id}).Property(TMDbHelper.Settled)')
+        if window_id != self._settle_window or (self._settle_done and not settled):
+            self._settle_window, self._settle_since, self._settle_done = window_id, monotonic(), False
+            return
+        if settled:  # Set by us or by the skin itself
+            self._settle_done = True
+            return
+        delay = get_infolabel(f'Window({window_id}).Property(TMDbHelper.SettleDelay)')
+        try:
+            if not delay or (monotonic() - self._settle_since) * 1000 < int(delay):
+                return
+        except ValueError:
+            return
+        try:
+            Window(window_id).setProperty('TMDbHelper.Settled', 'True')
+        except RuntimeError:
+            return
+        self._settle_done = True
 
     localwidgetcontainer_default_window_ids = (
         10000, 11101, 11102, 11103, 11104,
@@ -204,6 +237,8 @@ class Poller(WindowChecker):
             if self.get_window_property('ServiceStop', is_home=True):
                 self.exit = True
                 break
+
+            self._on_settle()
 
             # sit idle when on fullscreen video and treat like screensaver
             if self.is_on_fullscreen:
