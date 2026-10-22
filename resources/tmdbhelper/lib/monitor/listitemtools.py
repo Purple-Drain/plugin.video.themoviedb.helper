@@ -2,6 +2,7 @@ import xbmcgui
 from tmdbhelper.lib.addon.plugin import get_condvisibility, get_localized
 from tmdbhelper.lib.addon.logger import kodi_try_except
 from tmdbhelper.lib.monitor.common import CommonMonitorFunctions
+from tmdbhelper.lib.monitor.utils import get_live_window
 from tmdbhelper.lib.monitor.listitemgetter import ListItemInfoGetter
 from tmdbhelper.lib.monitor.listitemfinaliser import ListItemMonitorFinaliserContainerMethod, ListItemMonitorFinaliserWindowMethod
 from tmdbhelper.lib.items.listitem import ListItem
@@ -67,8 +68,10 @@ class ListItemMonitorFunctions(CommonMonitorFunctions, ListItemInfoGetter):
     # =========
 
     def add_item_listcontainer(self, listitem, window_id=None, container_id=None):
+        _win = get_live_window(window_id or self.cur_window, 'add_item_listcontainer')  # Note get _win separate from _lst
+        if not _win:
+            return
         try:
-            _win = xbmcgui.Window(window_id or self.cur_window)  # Note get _win separate from _lst
             _lst = _win.getControl(container_id or self._listcontainer)  # Note must get _lst in same func as addItem else crash
         except Exception:
             _lst = None
