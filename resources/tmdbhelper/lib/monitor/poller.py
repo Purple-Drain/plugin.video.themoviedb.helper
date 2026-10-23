@@ -1,7 +1,7 @@
 from time import monotonic
-from xbmcgui import Window
 from tmdbhelper.lib.addon.plugin import get_condvisibility, get_infolabel
 from jurialmunkey.window import WindowChecker
+from tmdbhelper.lib.monitor.utils import get_live_window
 
 POLL_MIN_INCREMENT = 0.2
 POLL_MID_INCREMENT = 1
@@ -121,11 +121,10 @@ class Poller(WindowChecker):
                 return
         except ValueError:
             return
-        try:
-            Window(window_id).setProperty('TMDbHelper.Settled', 'True')
-        except RuntimeError:
-            return
-        self._settle_done = True
+        self._settle_done = True  # Set or not, try once per visit: a dead id retried every poll floods kodi.log
+        _win = get_live_window(window_id, 'settle')
+        if _win:
+            _win.setProperty('TMDbHelper.Settled', 'True')
 
     localwidgetcontainer_default_window_ids = (
         10000, 11101, 11102, 11103, 11104,
